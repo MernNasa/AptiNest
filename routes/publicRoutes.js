@@ -3,7 +3,7 @@ const User = require("../models/user_model");
 const sendEmail = require("../config/email");
 const jwt=require("jsonwebtoken");
 const { verifyToken } = require("../middleware/authMiddleware");
-const { liveExams, allExams } = require("../controllers/examController");
+const { liveExams, allExams, attendExam } = require("../controllers/examController");
 const publicRoute=express.Router()
 
 
@@ -117,10 +117,7 @@ mernnasa@gmail.com `
  *       500:
  *         description: Server error
  */
-
-
 publicRoute.post("/login",async (req,res) => {
-    console.log("login")
     const {email,password}=req.body
     const user=await User.findOne({email})
     if(password===user.password){
@@ -147,4 +144,90 @@ publicRoute.get("/live-exams",verifyToken,liveExams)
 //! all-exams
 
 publicRoute.get("/all-exams",verifyToken,allExams)
+
+/**
+ * @swagger
+ * /api/attend-exam:
+ *   post:
+ *     summary: Attend an exam
+ *     description: |
+ *       This endpoint checks if the user is registered and if the exam is currently ongoing. 
+ *       If valid, it returns all related questions to the user.
+ *     tags:
+ *       - Attend Exams
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - examId
+ *               - userId
+ *             properties:
+ *               examId:
+ *                 type: string
+ *                 description: ID of the exam to attend
+ *                 example: "6611e3f1f77b4e3a4c8e6d51"
+ *               userId:
+ *                 type: string
+ *                 description: ID of the registered user
+ *                 example: "6611a7b6d2c9e6bd34f8f211"
+ *     responses:
+ *       200:
+ *         description: Questions fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Questions fetched successfully
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Question'
+ *       400:
+ *         description: Missing examId or userId in request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: examId and userId are required
+ *       403:
+ *         description: User not registered or exam is not ongoing
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: You need to register before attending the exam
+ *       404:
+ *         description: Exam not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Exam not found
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Server error
+ */
+publicRoute.post("/attend-exam",verifyToken,attendExam)
 module.exports=publicRoute
