@@ -129,13 +129,42 @@ publicRoute.post("/login",async (req,res) => {
             maxAge:3*24*60*60*1000
         })
 
-        res.status(200).json({message:"login successfully",role:user.role})
+        res.status(200).json({message:"login successfully",role:user.role,id:user._id})
     }
     else{
         res.status(500).json({message:"Password wrong"})
     }
 })
-
+/**
+ * @swagger
+ * /api/logout:
+ *   post:
+ *     summary: Logout the user
+ *     description: Clears the authentication token from cookies and logs out the user.
+ *     tags:
+ *       - Auth
+ *     responses:
+ *       200:
+ *         description: Logout successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Logout successful
+ */
+publicRoute.post("/logout", (req, res) => {
+    res.clearCookie('token', {
+      httpOnly: true,
+      sameSite: 'Strict',
+      secure: false // set to true if using HTTPS in production
+    });
+  
+    res.status(200).json({ message: "Logout successful" });
+  });
+  
 
 //! live exams
 
@@ -163,16 +192,11 @@ publicRoute.get("/all-exams",verifyToken,allExams)
  *             type: object
  *             required:
  *               - examId
- *               - userId
  *             properties:
  *               examId:
  *                 type: string
  *                 description: ID of the exam to attend
  *                 example: "6611e3f1f77b4e3a4c8e6d51"
- *               userId:
- *                 type: string
- *                 description: ID of the registered user
- *                 example: "6611a7b6d2c9e6bd34f8f211"
  *     responses:
  *       200:
  *         description: Questions fetched successfully
@@ -230,4 +254,19 @@ publicRoute.get("/all-exams",verifyToken,allExams)
  *                   example: Server error
  */
 publicRoute.post("/attend-exam",verifyToken,attendExam)
+
+publicRoute.get("/findme",verifyToken,async (req,res) => {
+    const userId=req.user.id
+    try {
+        const userdetails=await User.findById(userId)
+        if(userdetails){
+            return res.status(200).json({userdetails})
+        }
+        else{
+            return res.status(404).json({message:"user not found"})
+        }
+    } catch (error) {
+        
+    }
+})
 module.exports=publicRoute

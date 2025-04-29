@@ -1,8 +1,8 @@
 const express=require("express");
 const { verifyToken, authorizeRoles } = require("../middleware/authMiddleware");
 const User = require("../models/user_model");
-const { createExam, updateExamStatus, cancelledExam, updateScheduleDateTime, deleteExam, addquestions, examQuestion, updateQuestion, deleteQuestion } = require("../controllers/examController");
-const {getExams, allstudents} = require("../controllers/adminController");
+const { createExam, updateExamStatus, cancelledExam, updateScheduleDateTime, deleteExam, addquestions, examQuestion, updateQuestion, deleteQuestion, resultsCalculation } = require("../controllers/examController");
+const {getExams, allstudents, deleteUser} = require("../controllers/adminController");
 const adminRouter=express.Router()
 
 
@@ -91,6 +91,8 @@ adminRouter.get('/admin-dashboard', verifyToken, authorizeRoles('admin'), async(
  */
 adminRouter.get("/all-students",verifyToken,authorizeRoles('admin'),allstudents)
 
+adminRouter.delete("/user/:userId",verifyToken,authorizeRoles('admin'),deleteUser)
+
 
 /**
  * @swagger
@@ -145,19 +147,12 @@ adminRouter.post("/create-exam",verifyToken,authorizeRoles('admin'),createExam)
 
 /**
  * @swagger
- * /api/exams/{id}:
+ * /api/exams:
  *   get:
  *     summary: Get all exams created by a specific admin
  *     tags: [Exams]
  *     security:
  *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         description: The ID of the admin
- *         schema:
- *           type: string
  *     responses:
  *       200:
  *         description: Successfully fetched all exams
@@ -178,13 +173,13 @@ adminRouter.post("/create-exam",verifyToken,authorizeRoles('admin'),createExam)
  *       500:
  *         description: Internal server error
  */
-adminRouter.get("/exams/:id",verifyToken,authorizeRoles('admin'),getExams)
+adminRouter.get("/exams",verifyToken,authorizeRoles('admin'),getExams)
 
 
 /**
  * @swagger
  * /api/update-exam-status/{examId}:
- *   put:
+ *   get:
  *     summary: Update the status of an exam based on current time (Admin only)
  *     tags: [Exams]
  *     security:
@@ -228,8 +223,8 @@ adminRouter.get("/update-exam-status/:examId",verifyToken,authorizeRoles('admin'
 
 /**
  * @swagger
- * /api/cancel-exam/{examId}:
- *   put:
+ * /api/cancelled-exam/{examId}:
+ *   get:
  *     summary: Cancel an exam (Admin only)
  *     tags: [Exams]
  *     security:
@@ -648,4 +643,45 @@ adminRouter.put("/update-questions/:questionId",verifyToken,authorizeRoles('admi
  *                   example: Server error
  */
 adminRouter.delete("/delete-question/:questionId",verifyToken,authorizeRoles('admin'),deleteQuestion)
+
+/**
+ * @swagger
+ * /api/calculate-results/{examId}:
+ *   get:
+ *     summary: Fetch all questions related to a specific exam
+ *     description: This endpoint fetches all the questions related to the specified exam.
+ *     tags:
+ *       - Results
+ *     parameters:
+ *       - name: examId
+ *         in: path
+ *         description: The ID of the exam to fetch questions for.
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Successfully fetched all questions for the exam.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 questionId:
+ *                   type: string
+ *                   description: The ID of the question
+ *                 questionText:
+ *                   type: string
+ *                   description: The text of the question
+ *                 options:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                   description: The options for the question
+ *       404:
+ *         description: Exam not found
+ *       500:
+ *         description: Internal server error
+ */
+adminRouter.get("/calculate-results/:examId",verifyToken,authorizeRoles('admin'),resultsCalculation)
 module.exports={adminRouter}

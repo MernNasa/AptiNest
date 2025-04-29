@@ -1,6 +1,8 @@
 const Exam = require("../models/exam_model");
 const Questions = require("../models/questions_model");
+const Results = require("../models/result_model");
 const User = require("../models/user_model");
+const UserAnswer = require("../models/userAnswers_model");
 
 
 //! Create Exam 
@@ -8,7 +10,8 @@ const User = require("../models/user_model");
 
 const createExam = async (req, res) => {
   try {
-    const {  title,description,scheduleDateTime, duration, status, maxMarks,passingMarks,totalQuestions,category } = req.body;
+    const {  title,description,scheduleDate,scheduleTime, duration, maxMarks,passMarks,totalQuestions,category } = req.body;
+    const combined = new Date(`${scheduleDate}T${scheduleTime}:00`);
 
     // Create new exam
     const newExam = new Exam({
@@ -16,11 +19,11 @@ const createExam = async (req, res) => {
       adminName:req.user.name,
       title,
       description,
-      scheduleDateTime,
+      scheduleDateTime:combined,
       duration,
-      status,
+      status:"Scheduled",
       maxMarks,
-      passingMarks,
+      passingMarks:passMarks,
       totalQuestions,
       category
     });
@@ -345,7 +348,8 @@ const deleteQuestion=async (req,res) => {
 
 //! attend exam
 const attendExam=async (req,res) => {
-  const {examId,userId}=req.body
+  const {examId}=req.body
+  const userId=req.user.id
   if (!examId || !userId) {
     return res.status(400).json({ message: "examId and userId are required" });
   }
@@ -374,6 +378,187 @@ const attendExam=async (req,res) => {
   }
 }
 
+//! resultsCalculation
+
+const resultsCalculation = async (req, res) => {
+  const { examId } = req.params;
+  const BATCH_SIZE = 100;
+
+  try {
+    // 1. Get all questions and map them by stringified ID
+    const allQuestions = await Questions.find({ examId });
+    const questionMap = {};
+    allQuestions.forEach(question => {
+      questionMap[question._id.toString()] = {
+        correctAnswer: question.correctAnswer,
+        marks: question.marks
+      };
+    });
+
+    // 2. Get all user submissions for this exam
+    const submissions = await UserAnswer.find({ examId });
+
+    let processedCount = 0;
+    let batchResults = [];
+    let batchCounter = 0;
+
+    // 3. Process each submission
+    for (const submission of submissions) {
+      let totalScore = 0;
+      let attemptedQuestions = 0;
+      let correctAnswers = 0;
+      for (const answer of submission.answers) {
+        const qid = answer.questionId.toString();
+        const question = questionMap[qid];
+
+        if (question) {
+          attemptedQuestions++;
+          if (answer.selectedOption === question.correctAnswer) {
+            correctAnswers++;
+            totalScore += question.marks;
+          }
+        }
+      }
+
+      // 4. Prepare result document for bulkWrite
+      batchResults.push({
+        updateOne: {
+          filter: { userId: submission.userId, examId: submission.examId },
+          update: {
+            $set: {
+              userId: submission.userId,
+              examId: submission.examId,
+              totalScore,
+              attemptedQuestions,
+              correctAnswers,
+              submittedAt: submission.submittedAt
+            }
+          },
+          upsert: true
+        }
+      });
+
+      processedCount++;
+
+      // 5. Bulk write in batches
+      if (batchResults.length >= BATCH_SIZE) {
+        await Results.bulkWrite(batchResults);
+        batchResults = [];
+        batchCounter++;
+      }
+    }
+
+    // 6. Final batch
+    if (batchResults.length > 0) {
+      await Results.bulkWrite(batchResults);
+      batchCounter++;
+    }
+
+    res.status(200).json({
+      message: "Result calculation completed",
+      totalProcessed: processedCount,
+      batchesProcessed: batchCounter
+    });
+
+  } catch (error) {
+    console.error("Error in batch processing results:", error);
+    res.status(500).json({
+      message: "Error in batch processing results",
+      error: error.message
+    });
+  }
+};
 
 
-module.exports = { createExam ,updateExamStatus,cancelledExam,updateScheduleDateTime,liveExams,allExams,deleteExam,addquestions,attendExam,examQuestion,updateQuestion,deleteQuestion};
+const examsubmit=async (req,res) => {
+  try {
+    const userId=req.user.id
+  const {examId,answers}=req.body
+  if (!userId || !examId || !answers || !Array.isArray(answers)) {
+    return res.status(400).json({ message: "Missing or invalid data" });
+  }
+  const existAnswers=await UserAnswer.findOne({userId,examId})
+  if(existAnswers){
+    return res.status(400).json({ message: "You already submitted this exam" });
+  }
+  const currentExam=await Exam.findById(examId)
+   if(currentExam.status==="Ongoing"){
+    const useranswer=new UserAnswer({
+      userId,
+      examId,
+      answers
+    })
+    await useranswer.save()
+    res.status(201).json({ message: "Exam Submitted successfully", });
+   }
+   else{
+    res.status(400).json({ message: "You can't submitted the exam", });
+   }
+  
+  } catch (error) {
+    console.error("Error submitting exam:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+
+}
+
+const userresult=async (req,res) => {
+  try {
+    const {examId}=req.params
+    const userId=req.user.id
+    const results=await Results.find({userId,examId})
+    res.status(200).json({message:"Successfully fetched Results",results})
+  } catch (error) {
+    console.error("Error fetching the results:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+}
+
+
+const examResponse = async (req, res) => {
+  try {
+    const { examId } = req.params;
+    const userId = req.user.id;
+
+    // Step 1: Fetch all questions of the exam
+    const allQuestions = await Questions.find({ examId });
+    const questionMap = {};
+    allQuestions.forEach(question => {
+      questionMap[question._id.toString()] = {
+        questionText: question.questionText,
+        correctAnswer: question.correctAnswer,
+        marks: question.marks
+      };
+    });
+
+    // Step 2: Get user's answers without nested _id
+    const examresponse = await UserAnswer.find({ examId, userId }, { _id: 0 });
+
+    const userAnswers = examresponse.flatMap(entry => 
+      entry.answers.map(answer => {
+        const qid = answer.questionId.toString();
+        const questionData = questionMap[qid] || {};
+
+        return {
+          questionId: qid,
+          questionText: questionData.questionText || "Unknown",
+          correctAnswer: questionData.correctAnswer || "Unknown",
+          selectedOption: answer.selectedOption
+        };
+      })
+    );
+
+    // Step 3: Send combined result
+    res.status(200).json({
+      message: "Successfully fetched detailed response",
+      examId,
+      answers: userAnswers
+    });
+
+  } catch (error) {
+    console.error("Error fetching the exam Response:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+module.exports = { createExam ,updateExamStatus,cancelledExam,updateScheduleDateTime,liveExams,allExams,deleteExam,addquestions,attendExam,examQuestion,updateQuestion,deleteQuestion,resultsCalculation,examsubmit,userresult,examResponse};
