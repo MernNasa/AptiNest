@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: express-app
+    env: node
+    plan: free
+    buildCommand: "npm install"
+    startCommand: "npm start"
+    envVars:
+      - key: JWT_SECRET
+        value: dhi562yx6e5@FVUCR!$%cfvbyjn6ubBUG
+      - key: MONGODB_URL
+        fromService:
+          type: mongodb
+          name: express-mongo
+          property: connectionString
+
+databases:
+  - name: express-mongo
+    databaseName: expressdb
