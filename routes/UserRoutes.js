@@ -8,6 +8,9 @@ const userRoute=express.Router()
 userRoute.get("/user",async (req,res) => {
     res.send("user router")
 })
+userRoute.get("/demo",(req,res)=>{
+    res.status(200).json({message:"you finally done with the project 😁😁"})
+})
 
 /**
  * @swagger
