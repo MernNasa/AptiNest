@@ -12,6 +12,10 @@ userRoute.get("/demo",(req,res)=>{
     res.status(200).json({message:"you finally done with the project 😁😁"})
 })
 
+userRoute.get("/demo2",(req,res)=>{
+    res.status(200).json({message:"you finally done with the live testing also 😁😁"})
+})
+
 /**
  * @swagger
  * /api/student-dashboard:
