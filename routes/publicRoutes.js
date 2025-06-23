@@ -125,7 +125,7 @@ publicRoute.post("/login",async (req,res) => {
         res.cookie('token',token,{
             httpOnly: true,
             sameSite:'Strict',
-            secure: false ,
+            secure: true,
             maxAge:3*24*60*60*1000
         })
 
