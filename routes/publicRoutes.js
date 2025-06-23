@@ -126,7 +126,8 @@ publicRoute.post("/login",async (req,res) => {
             httpOnly: true,
             sameSite:'Strict',
             secure: true,
-            maxAge:3*24*60*60*1000
+            sameSite: 'Lax',
+            maxAge: 24 * 60 * 60 * 1000,
         })
 
         res.status(200).json({message:"login successfully",role:user.role,id:user._id})
