@@ -124,7 +124,6 @@ publicRoute.post("/login",async (req,res) => {
         const token = jwt.sign({ id: user._id, role: user.role ,name:user.name}, process.env.JWT_SECRET, { expiresIn: '1hr' });  
         res.cookie('token',token,{
             httpOnly: true,
-            sameSite:'Strict',
             secure: true,
             sameSite: 'Lax',
             maxAge: 24 * 60 * 60 * 1000,
