@@ -159,7 +159,7 @@ publicRoute.post("/logout", (req, res) => {
     res.clearCookie('token', {
       httpOnly: true,
       sameSite: 'Strict',
-      secure: false // set to true if using HTTPS in production
+      secure: true // set to true if using HTTPS in production
     });
   
     res.status(200).json({ message: "Logout successful" });
