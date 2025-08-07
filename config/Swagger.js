@@ -12,8 +12,11 @@ const options = {
     },
     servers: [
       {
-        url: "http://localhost:5050", // your base URL
+        url: "http://localhost:5050" // your base URL
       },
+      {
+        url:"https://aptinest.onrender.com"
+      }
     ],
   },
   apis: ["./routes/*.js","./controllers/*.js"], // path to your route files

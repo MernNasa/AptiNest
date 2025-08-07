@@ -75,6 +75,7 @@ MERN NASA
 mernnasa@gmail.com `
 
     const user=await User.findOne({email})
+    console.log(user)
     if(user) return res.status(400).json({ message: 'User already register' });
     const emailSent = await sendEmail(email,"Successfull Registration", text)
     if(!emailSent){
@@ -84,6 +85,7 @@ mernnasa@gmail.com `
         const result=await User.insertOne({name,email,mobilenumber,role,password,course})
         res.status(200).json({message:"User Create Successfully",id:result._id})
     }
+     
     
 })
 
@@ -255,15 +257,69 @@ publicRoute.get("/all-exams",verifyToken,allExams)
  */
 publicRoute.post("/attend-exam",verifyToken,attendExam)
 
+
+
+
+/**
+ * @swagger
+ * /api/findme:
+ *   get:
+ *     summary: Get the authenticated user's details
+ *     description: Returns the authenticated user's information using the token.
+ *     tags:
+ *       - Auth
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved user details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 userdetails:
+ *                   $ref: '#/components/schemas/User'
+ *                 authenticated:
+ *                   type: boolean
+ *                   example: true
+ *       401:
+ *         description: Unauthorized - Token missing or invalid
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Unauthorized
+ *                 authenticated:
+ *                   type: boolean
+ *                   example: false
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: user not found
+ *                 authenticated:
+ *                   type: boolean
+ *                   example: false
+ */
+
 publicRoute.get("/findme",verifyToken,async (req,res) => {
     const userId=req.user.id
     try {
         const userdetails=await User.findById(userId)
         if(userdetails){
-            return res.status(200).json({userdetails})
+            return res.status(200).json({userdetails,authenticated:true})
         }
         else{
-            return res.status(404).json({message:"user not found"})
+            return res.status(404).json({message:"user not found",authenticated:false})
         }
     } catch (error) {
         
