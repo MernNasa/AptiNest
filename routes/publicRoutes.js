@@ -160,7 +160,7 @@ publicRoute.post("/login",async (req,res) => {
 publicRoute.post("/logout", (req, res) => {
     res.clearCookie('token', {
       httpOnly: true,
-      sameSite: 'Strict',
+      sameSite: 'None',
       secure: true // set to true if using HTTPS in production
     });
   
